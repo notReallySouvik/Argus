@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.log
+dist/
+build/
+*.egg-info/
+reports/
+argus.db
+.env

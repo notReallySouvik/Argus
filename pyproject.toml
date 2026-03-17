@@ -1,0 +1,28 @@
+[project]
+name = "argus"
+version = "0.1.0"
+description = "Attack surface intelligence CLI for authorized security reconnaissance"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "typer[all]",
+  "httpx",
+  "dnspython",
+  "pydantic",
+  "jinja2",
+  "rich",
+  "selectolax"
+]
+
+[project.scripts]
+argus = "argus.cli:app"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["argus"]
+
+[tool.setuptools.package-data]
+argus = []

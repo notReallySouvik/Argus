@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from argus.config import DEFAULT_OUTPUT_DIR
+from argus.config import DEFAULT_OUTPUT_DIR, VERSION
 from argus.core.engine import run_scan
 from argus.output.csv_writer import write_assets_csv
 from argus.output.html_writer import write_html_report
@@ -14,16 +14,36 @@ from argus.output.json_writer import write_json_report
 from argus.utils.logger import set_log_level
 
 app = typer.Typer(
-    help="Argus - attack surface intelligence CLI",
+    help=(
+        "Argus — attack surface intelligence engine\n\n"
+        "Common usage:\n"
+        "  argus scan example.com --tech --output reports\n"
+        "  argus scan example.com --verbose\n"
+        "  argus scan example.com --debug\n\n"
+        "Run 'argus scan --help' to see all scan options."
+    ),
     no_args_is_help=True,
 )
 console = Console()
 
 
-@app.callback()
-def main() -> None:
-    """Argus root command group."""
-    pass
+@app.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-v",
+        help="Show Argus version and exit",
+    ),
+) -> None:
+    """Argus CLI."""
+    if version:
+        console.print(f"[bold cyan]Argus[/bold cyan] v{VERSION}")
+        raise typer.Exit()
+
+    if ctx.invoked_subcommand is None:
+        console.print(ctx.get_help())
 
 
 def severity_label(severity: str) -> str:
@@ -38,14 +58,38 @@ def severity_label(severity: str) -> str:
 
 @app.command()
 def scan(
-    target: str = typer.Argument(..., help="Target domain or URL"),
-    passive: bool = typer.Option(True, "--passive/--no-passive", help="Enable passive recon"),
-    tech: bool = typer.Option(True, "--tech/--no-tech", help="Enable technology fingerprinting"),
-    output: Path = typer.Option(Path(DEFAULT_OUTPUT_DIR), "--output", "-o", help="Output directory"),
-    verbose: bool = typer.Option(False, "--verbose", help="Enable verbose logging"),
-    debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
+    target: str = typer.Argument(
+        ...,
+        help="Target domain or URL (for example: example.com or https://example.com)",
+    ),
+    passive: bool = typer.Option(
+        True,
+        "--passive/--no-passive",
+        help="Enable passive discovery",
+    ),
+    tech: bool = typer.Option(
+        True,
+        "--tech/--no-tech",
+        help="Enable technology fingerprinting",
+    ),
+    output: Path = typer.Option(
+        Path(DEFAULT_OUTPUT_DIR),
+        "--output",
+        "-o",
+        help="Directory to save reports",
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        help="Show informational logs",
+    ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        help="Show debug logs",
+    ),
 ) -> None:
-    """Run a basic Argus scan."""
+    """Run an Argus scan against a target."""
     if debug:
         set_log_level(logging.DEBUG)
     elif verbose:
@@ -153,3 +197,5 @@ def scan(
 
 if __name__ == "__main__":
     app()
+
+      

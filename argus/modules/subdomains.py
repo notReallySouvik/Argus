@@ -1,17 +1,6 @@
 from typing import List
 
-COMMON_SUBDOMAINS = [
-    "www",
-    "api",
-    "app",
-    "dev",
-    "staging",
-    "test",
-    "admin",
-    "portal",
-    "mail",
-    "vpn",
-]
+from argus.config import COMMON_SUBDOMAINS
 
 
 def generate_candidate_subdomains(target: str) -> List[str]:

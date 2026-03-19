@@ -7,6 +7,11 @@ class Service(BaseModel):
     protocol: str
     name: Optional[str] = None
 
+class ProbeResult(BaseModel):
+    http_url: Optional[str] = None
+    https_url: Optional[str] = None
+    preferred_url: Optional[str] = None
+    redirect_chain_detected: bool = False
 
 class WebMetadata(BaseModel):
     url: str
@@ -14,7 +19,7 @@ class WebMetadata(BaseModel):
     title: Optional[str] = None
     server: Optional[str] = None
     technologies: List[str] = Field(default_factory=list)
-
+    body_preview: Optional[str] = None
 
 class Asset(BaseModel):
     host: str
@@ -22,5 +27,6 @@ class Asset(BaseModel):
     ip_addresses: List[str] = Field(default_factory=list)
     services: List[Service] = Field(default_factory=list)
     web: Optional[WebMetadata] = None
+    probe: Optional[ProbeResult] = None
     risk_signals: List[str] = Field(default_factory=list)
     confidence: float = 0.0

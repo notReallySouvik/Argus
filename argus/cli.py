@@ -1,13 +1,17 @@
-import typer
+import logging
 from pathlib import Path
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
 
+import typer
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+
+from argus.config import DEFAULT_OUTPUT_DIR
 from argus.core.engine import run_scan
-from argus.output.json_writer import write_json_report
 from argus.output.csv_writer import write_assets_csv
 from argus.output.html_writer import write_html_report
+from argus.output.json_writer import write_json_report
+from argus.utils.logger import set_log_level
 
 app = typer.Typer(
     help="Argus - attack surface intelligence CLI",
@@ -22,14 +26,33 @@ def main() -> None:
     pass
 
 
+def severity_label(severity: str) -> str:
+    styles = {
+        "high": "[bold red]HIGH[/bold red]",
+        "medium": "[bold yellow]MEDIUM[/bold yellow]",
+        "info": "[bold blue]INFO[/bold blue]",
+        "low": "[bold green]LOW[/bold green]",
+    }
+    return styles.get(severity.lower(), severity.upper())
+
+
 @app.command()
 def scan(
-    target: str = typer.Argument(..., help="Target domain"),
+    target: str = typer.Argument(..., help="Target domain or URL"),
     passive: bool = typer.Option(True, "--passive/--no-passive", help="Enable passive recon"),
     tech: bool = typer.Option(True, "--tech/--no-tech", help="Enable technology fingerprinting"),
-    output: Path = typer.Option(Path("reports"), "--output", "-o", help="Output directory"),
+    output: Path = typer.Option(Path(DEFAULT_OUTPUT_DIR), "--output", "-o", help="Output directory"),
+    verbose: bool = typer.Option(False, "--verbose", help="Enable verbose logging"),
+    debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
 ) -> None:
     """Run a basic Argus scan."""
+    if debug:
+        set_log_level(logging.DEBUG)
+    elif verbose:
+        set_log_level(logging.INFO)
+    else:
+        set_log_level(logging.WARNING)
+
     console.print(f"[bold cyan]Argus[/bold cyan] scanning [bold]{target}[/bold]")
 
     try:
@@ -37,33 +60,66 @@ def scan(
     except ValueError as exc:
         console.print(f"[bold red]Error:[/bold red] {exc}")
         raise typer.Exit(code=1)
+    except Exception as exc:
+        console.print(f"[bold red]Unexpected error:[/bold red] {exc}")
+        raise typer.Exit(code=1)
 
     json_path = write_json_report(result, output)
     csv_path = write_assets_csv(result, output)
     html_path = write_html_report(result, output)
 
-    table = Table(title="Discovered Assets")
-    table.add_column("Host")
-    table.add_column("IPs")
-    table.add_column("Title")
-    table.add_column("Technologies")
-    table.add_column("Signals")
+    assets_table = Table(title="Discovered Assets")
+    assets_table.add_column("Host", style="cyan", no_wrap=True)
+    assets_table.add_column("IPs")
+    assets_table.add_column("Status", justify="center")
+    assets_table.add_column("Title")
+    assets_table.add_column("Technologies")
+    assets_table.add_column("Signals")
 
     for asset in result.assets:
         title = asset.web.title if asset.web and asset.web.title else "-"
         techs = ", ".join(asset.web.technologies) if asset.web and asset.web.technologies else "-"
-        signals = ", ".join(asset.risk_signals) if asset.risk_signals else "-"
+        signals = ", ".join(asset.risk_signals[:4]) if asset.risk_signals else "-"
+        if asset.risk_signals and len(asset.risk_signals) > 4:
+            signals += f" (+{len(asset.risk_signals) - 4})"
         ips = ", ".join(asset.ip_addresses) if asset.ip_addresses else "-"
-        table.add_row(asset.host, ips, title, techs, signals)
+        status = str(asset.web.status_code) if asset.web and asset.web.status_code else "-"
 
-    console.print(table)
+        assets_table.add_row(asset.host, ips, status, title, techs, signals)
+
+    console.print(assets_table)
+
+    findings_table = Table(title="Findings")
+    findings_table.add_column("Severity", no_wrap=True)
+    findings_table.add_column("Asset", style="cyan")
+    findings_table.add_column("Title")
+    findings_table.add_column("Recommendation")
+
+    if result.findings:
+        for finding in result.findings:
+            recommendation = finding.recommendation or "-"
+            findings_table.add_row(
+                severity_label(finding.severity),
+                finding.asset,
+                finding.title,
+                recommendation,
+            )
+        console.print(findings_table)
+    else:
+        console.print(Panel("No findings generated for this scan.", title="Findings", expand=False))
+
+    high_count = sum(1 for f in result.findings if f.severity.lower() == "high")
+    medium_count = sum(1 for f in result.findings if f.severity.lower() == "medium")
+    info_count = sum(1 for f in result.findings if f.severity.lower() == "info")
+    low_count = sum(1 for f in result.findings if f.severity.lower() == "low")
 
     summary_text = (
         f"Candidate hosts: {result.summary.candidate_hosts}\n"
         f"Resolved hosts: {result.summary.resolved_hosts}\n"
         f"Live web assets: {result.summary.live_web_assets}\n"
         f"Assets with signals: {result.summary.assets_with_signals}\n"
-        f"Findings: {len(result.findings)}"
+        f"Total findings: {len(result.findings)}\n"
+        f"High: {high_count} | Medium: {medium_count} | Info: {info_count} | Low: {low_count}"
     )
 
     console.print(Panel(summary_text, title="Scan Summary", expand=False))

@@ -74,18 +74,40 @@ def scan(
     assets_table.add_column("Status", justify="center")
     assets_table.add_column("Title")
     assets_table.add_column("Technologies")
+    assets_table.add_column("Services")
     assets_table.add_column("Signals")
 
     for asset in result.assets:
         title = asset.web.title if asset.web and asset.web.title else "-"
         techs = ", ".join(asset.web.technologies) if asset.web and asset.web.technologies else "-"
+
+        services = (
+            ", ".join(
+                f"{svc.service_name or 'unknown'}:{svc.port}"
+                for svc in asset.services[:4]
+            )
+            if asset.services
+            else "-"
+        )
+        if asset.services and len(asset.services) > 4:
+            services += f" (+{len(asset.services) - 4})"
+
         signals = ", ".join(asset.risk_signals[:4]) if asset.risk_signals else "-"
         if asset.risk_signals and len(asset.risk_signals) > 4:
             signals += f" (+{len(asset.risk_signals) - 4})"
+
         ips = ", ".join(asset.ip_addresses) if asset.ip_addresses else "-"
         status = str(asset.web.status_code) if asset.web and asset.web.status_code else "-"
 
-        assets_table.add_row(asset.host, ips, status, title, techs, signals)
+        assets_table.add_row(
+            asset.host,
+            ips,
+            status,
+            title,
+            techs,
+            services,
+            signals,
+        )
 
     console.print(assets_table)
 
@@ -93,16 +115,16 @@ def scan(
     findings_table.add_column("Severity", no_wrap=True)
     findings_table.add_column("Asset", style="cyan")
     findings_table.add_column("Title")
-    findings_table.add_column("Recommendation")
+    findings_table.add_column("Impact")
 
     if result.findings:
         for finding in result.findings:
-            recommendation = finding.recommendation or "-"
+            impact = finding.impact or "-"
             findings_table.add_row(
                 severity_label(finding.severity),
                 finding.asset,
                 finding.title,
-                recommendation,
+                impact,
             )
         console.print(findings_table)
     else:
@@ -117,6 +139,7 @@ def scan(
         f"Candidate hosts: {result.summary.candidate_hosts}\n"
         f"Resolved hosts: {result.summary.resolved_hosts}\n"
         f"Live web assets: {result.summary.live_web_assets}\n"
+        f"Exposed services: {result.summary.exposed_services}\n"
         f"Assets with signals: {result.summary.assets_with_signals}\n"
         f"Total findings: {len(result.findings)}\n"
         f"High: {high_count} | Medium: {medium_count} | Info: {info_count} | Low: {low_count}"

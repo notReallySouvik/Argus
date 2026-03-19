@@ -9,6 +9,7 @@ class ScanSummary(BaseModel):
     resolved_hosts: int = 0
     live_web_assets: int = 0
     assets_with_signals: int = 0
+    exposed_services: int = 0
 
 
 class ScanResult(BaseModel):

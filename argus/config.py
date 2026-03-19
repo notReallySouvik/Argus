@@ -62,4 +62,32 @@ CONFIDENCE_PRIMARY = 0.95
 CONFIDENCE_SECONDARY = 0.70
 
 # --- HTTP ---
-USER_AGENT = "Argus/0.1"
+USER_AGENT = "Argus/0.2"
+
+# --- Discovery Confidence ---
+SOURCE_CONFIDENCE = {
+    "wordlist": 0.55,
+    "crtsh": 0.80,
+    "manual": 0.95,
+}
+
+# --- Common Ports ---
+COMMON_PORTS = {
+    21: ("ftp", "file_transfer"),
+    22: ("ssh", "remote_admin"),
+    25: ("smtp", "mail"),
+    53: ("dns", "infrastructure"),
+    80: ("http", "web"),
+    110: ("pop3", "mail"),
+    143: ("imap", "mail"),
+    443: ("https", "web"),
+    445: ("smb", "file_sharing"),
+    3306: ("mysql", "database"),
+    3389: ("rdp", "remote_admin"),
+    5432: ("postgresql", "database"),
+    6379: ("redis", "database"),
+    8080: ("http-alt", "web"),
+    8443: ("https-alt", "web"),
+}
+
+DEFAULT_PORT_TIMEOUT = 1.5

@@ -14,3 +14,10 @@ def test_generate_candidate_subdomains_includes_common_entries():
     assert "www.example.com" in results
     assert "api.example.com" in results
     assert "admin.example.com" in results
+
+
+def test_generate_candidate_subdomains_has_no_duplicates():
+    target = "example.com"
+    results = generate_candidate_subdomains(target)
+
+    assert len(results) == len(set(results))

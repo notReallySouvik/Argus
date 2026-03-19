@@ -22,3 +22,14 @@ def test_write_json_report_contains_expected_keys(tmp_path):
     assert "assets" in data
     assert "findings" in data
     assert "summary" in data
+
+
+def test_write_json_report_keeps_summary_shape(tmp_path):
+    result = ScanResult(target="example.com")
+    output_file = write_json_report(result, tmp_path)
+
+    data = json.loads(output_file.read_text(encoding="utf-8"))
+
+    assert "candidate_hosts" in data["summary"]
+    assert "resolved_hosts" in data["summary"]
+    assert "live_web_assets" in data["summary"]

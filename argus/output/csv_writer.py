@@ -1,38 +1,62 @@
 import csv
 from pathlib import Path
+
+from argus.config import CSV_REPORT_NAME
 from argus.models.scan import ScanResult
 
 
 def write_assets_csv(result: ScanResult, output_dir: Path) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
-    out_file = output_dir / "assets.csv"
+    out_file = output_dir / CSV_REPORT_NAME
 
     with out_file.open("w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(
             [
                 "host",
+                "live",
+                "confidence",
+                "discovery_sources",
                 "ip_addresses",
+                "services",
                 "title",
                 "status_code",
                 "server",
                 "technologies",
                 "risk_signals",
-                "confidence",
+                "relationships",
             ]
         )
 
         for asset in result.assets:
+            discovery_sources = ", ".join(
+                source.name for source in asset.discovery_sources
+            ) if asset.discovery_sources else ""
+
+            services = ", ".join(
+                f"{svc.service_name or 'unknown'}:{svc.port}"
+                for svc in asset.services
+            ) if asset.services else ""
+
+            relationships = ", ".join(
+                f"{rel.relationship_type}:{rel.target}"
+                for rel in asset.relationships
+            ) if asset.relationships else ""
+
             writer.writerow(
                 [
                     asset.host,
+                    asset.live,
+                    asset.confidence,
+                    discovery_sources,
                     ", ".join(asset.ip_addresses),
+                    services,
                     asset.web.title if asset.web and asset.web.title else "",
                     asset.web.status_code if asset.web and asset.web.status_code else "",
                     asset.web.server if asset.web and asset.web.server else "",
                     ", ".join(asset.web.technologies) if asset.web else "",
                     ", ".join(asset.risk_signals),
-                    asset.confidence,
+                    relationships,
                 ]
             )
 

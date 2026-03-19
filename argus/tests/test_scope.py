@@ -23,6 +23,10 @@ def test_validate_target_accepts_subdomain():
     assert validate_target("dev.example.com") == "dev.example.com"
 
 
+def test_validate_target_accepts_url_input():
+    assert validate_target("https://dev.example.com/login") == "dev.example.com"
+
+
 def test_validate_target_rejects_invalid_domain():
     with pytest.raises(ValueError):
         validate_target("invalid_domain")

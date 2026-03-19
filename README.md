@@ -1,28 +1,3 @@
-<<<<<<< HEAD
-# ARGUS
-
-Argus is an attack surface intelligence engine for authorized security reconnaissance.
-
-It performs domain discovery, asset enumeration, technology fingerprinting, and exposure analysis, producing structured reports that help operators understand an organization’s external footprint.
-
-## Features
-
-- Domain intelligence
-- Subdomain discovery
-- Web service probing
-- Technology fingerprinting
-- Risk signal detection
-- JSON, CSV, and HTML reporting
-
-## Installation
-
-```bash
-git clone https://github.com/YOURUSERNAME/argus
-cd argus
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-=======
 # ARGUS
 
 **Argus** is an offensive reconnaissance and attack surface intelligence engine for authorized red team operations.
@@ -32,8 +7,6 @@ It performs passive and active recon to discover, correlate, and score externall
 Built on the principle:
 
 > **Visibility before vulnerability.**
-
----
 
 ## What Argus Does
 
@@ -226,4 +199,3 @@ MIT License
 ## Tagline
 
 **Map what’s exposed. Prioritize what matters.**
->>>>>>> 3b6ed7f (release: argus v0.1.0 mvp)

@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+
 from argus.config import JSON_REPORT_NAME
 from argus.models.scan import ScanResult
 

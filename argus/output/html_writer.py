@@ -1,3 +1,4 @@
+from collections import defaultdict
 from pathlib import Path
 
 from jinja2 import Template
@@ -19,8 +20,9 @@ HTML_TEMPLATE = """
             margin: 2rem;
             line-height: 1.5;
             color: #222;
+            max-width: 1200px;
         }
-        h1, h2, h3 {
+        h1, h2, h3, h4 {
             margin-bottom: 0.5rem;
         }
         .summary {
@@ -34,6 +36,19 @@ HTML_TEMPLATE = """
             border-radius: 10px;
             padding: 1rem;
             margin-bottom: 1.25rem;
+            background: #fff;
+        }
+        .asset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .asset-block {
+            padding: 0.75rem;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            background: #fafafa;
         }
         table {
             width: 100%;
@@ -64,6 +79,13 @@ HTML_TEMPLATE = """
         }
         ul {
             margin: 0.25rem 0 0.5rem 1rem;
+        }
+        .empty-box {
+            padding: 0.8rem;
+            border: 1px dashed #ccc;
+            border-radius: 8px;
+            color: #666;
+            margin-bottom: 1.25rem;
         }
     </style>
 </head>
@@ -109,53 +131,70 @@ HTML_TEMPLATE = """
             {% endif %}
         </p>
 
-        <p><strong>IP Addresses:</strong> {{ ", ".join(asset.ip_addresses) if asset.ip_addresses else "-" }}</p>
+        <div class="asset-grid">
+            <div class="asset-block">
+                <h4>Network</h4>
+                <p><strong>IP Addresses:</strong> {{ ", ".join(asset.ip_addresses) if asset.ip_addresses else "-" }}</p>
+                <p><strong>Services:</strong></p>
+                {% if asset.services %}
+                <ul>
+                    {% for svc in asset.services %}
+                    <li>{{ svc.service_name or "unknown" }}:{{ svc.port }}{% if svc.classification %} <span class="muted">({{ svc.classification }})</span>{% endif %}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="muted">-</p>
+                {% endif %}
+            </div>
 
-        <p><strong>Services:</strong></p>
-        {% if asset.services %}
-        <ul>
-            {% for svc in asset.services %}
-            <li>{{ svc.service_name or "unknown" }}:{{ svc.port }}{% if svc.classification %} <span class="muted">({{ svc.classification }})</span>{% endif %}</li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p class="muted">-</p>
-        {% endif %}
+            <div class="asset-block">
+                <h4>Web</h4>
+                <p><strong>Title:</strong> {{ asset.web.title if asset.web and asset.web.title else "-" }}</p>
+                <p><strong>Status:</strong> {{ asset.web.status_code if asset.web and asset.web.status_code else "-" }}</p>
+                <p><strong>Server:</strong> {{ asset.web.server if asset.web and asset.web.server else "-" }}</p>
+                <p><strong>Technologies:</strong>
+                    {% if asset.web and asset.web.technologies %}
+                        {% for tech in asset.web.technologies %}
+                            <span class="pill">{{ tech }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <span class="muted">-</span>
+                    {% endif %}
+                </p>
+            </div>
 
-        <p><strong>Technologies:</strong>
-            {% if asset.web and asset.web.technologies %}
-                {% for tech in asset.web.technologies %}
-                    <span class="pill">{{ tech }}</span>
-                {% endfor %}
-            {% else %}
-                <span class="muted">-</span>
-            {% endif %}
-        </p>
+            <div class="asset-block">
+                <h4>Signals</h4>
+                {% if asset.risk_signals %}
+                    {% for signal in asset.risk_signals %}
+                        <span class="pill">{{ signal }}</span>
+                    {% endfor %}
+                {% else %}
+                    <p class="muted">-</p>
+                {% endif %}
+            </div>
 
-        <p><strong>Signals:</strong>
-            {% if asset.risk_signals %}
-                {% for signal in asset.risk_signals %}
-                    <span class="pill">{{ signal }}</span>
-                {% endfor %}
-            {% else %}
-                <span class="muted">-</span>
-            {% endif %}
-        </p>
-
-        <p><strong>Relationships:</strong></p>
-        {% if asset.relationships %}
-        <ul>
-            {% for rel in asset.relationships %}
-            <li>{{ rel.relationship_type }} → {{ rel.target }}</li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p class="muted">-</p>
-        {% endif %}
+            <div class="asset-block">
+                <h4>Relationships</h4>
+                {% if grouped_relationships[asset.host] %}
+                    {% for rel_type, targets in grouped_relationships[asset.host].items() %}
+                        <p><strong>{{ rel_type }}:</strong></p>
+                        <ul>
+                            {% for target in targets %}
+                            <li>{{ target }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endfor %}
+                {% else %}
+                    <p class="muted">-</p>
+                {% endif %}
+            </div>
+        </div>
     </div>
     {% endfor %}
 
     <h2>Correlated Findings</h2>
+    {% if correlated_findings %}
     <table>
         <thead>
             <tr>
@@ -168,22 +207,24 @@ HTML_TEMPLATE = """
             </tr>
         </thead>
         <tbody>
-            {% for finding in result.findings %}
-                {% if is_correlated_finding(finding.signal) %}
-                <tr>
-                    <td>{{ finding.asset }}</td>
-                    <td>{{ finding.title }}</td>
-                    <td class="severity-{{ finding.severity }}">{{ finding.severity }}</td>
-                    <td>{{ finding.description }}</td>
-                    <td>{{ finding.impact if finding.impact else "-" }}</td>
-                    <td>{{ finding.recommendation if finding.recommendation else "-" }}</td>
-                </tr>
-                {% endif %}
+            {% for finding in correlated_findings %}
+            <tr>
+                <td>{{ finding.asset }}</td>
+                <td>{{ finding.title }}</td>
+                <td class="severity-{{ finding.severity }}">{{ finding.severity }}</td>
+                <td>{{ finding.description }}</td>
+                <td>{{ finding.impact if finding.impact else "-" }}</td>
+                <td>{{ finding.recommendation if finding.recommendation else "-" }}</td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
+    {% else %}
+    <div class="empty-box">No correlated findings were generated for this scan.</div>
+    {% endif %}
 
     <h2>Base Findings</h2>
+    {% if base_findings %}
     <table>
         <thead>
             <tr>
@@ -196,20 +237,21 @@ HTML_TEMPLATE = """
             </tr>
         </thead>
         <tbody>
-            {% for finding in result.findings %}
-                {% if not is_correlated_finding(finding.signal) %}
-                <tr>
-                    <td>{{ finding.asset }}</td>
-                    <td>{{ finding.title }}</td>
-                    <td class="severity-{{ finding.severity }}">{{ finding.severity }}</td>
-                    <td>{{ finding.description }}</td>
-                    <td>{{ finding.impact if finding.impact else "-" }}</td>
-                    <td>{{ finding.recommendation if finding.recommendation else "-" }}</td>
-                </tr>
-                {% endif %}
+            {% for finding in base_findings %}
+            <tr>
+                <td>{{ finding.asset }}</td>
+                <td>{{ finding.title }}</td>
+                <td class="severity-{{ finding.severity }}">{{ finding.severity }}</td>
+                <td>{{ finding.description }}</td>
+                <td>{{ finding.impact if finding.impact else "-" }}</td>
+                <td>{{ finding.recommendation if finding.recommendation else "-" }}</td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
+    {% else %}
+    <div class="empty-box">No base findings were generated for this scan.</div>
+    {% endif %}
 </body>
 </html>
 """
@@ -219,8 +261,23 @@ def write_html_report(result: ScanResult, output_dir: Path) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     out_file = output_dir / HTML_REPORT_NAME
 
+    correlated_findings = [f for f in result.findings if is_correlated_finding(f.signal)]
+    base_findings = [f for f in result.findings if not is_correlated_finding(f.signal)]
+
+    grouped_relationships: dict[str, dict[str, list[str]]] = {}
+    for asset in result.assets:
+        rel_map: dict[str, list[str]] = defaultdict(list)
+        for rel in asset.relationships:
+            rel_map[rel.relationship_type].append(rel.target)
+        grouped_relationships[asset.host] = dict(rel_map)
+
     template = Template(HTML_TEMPLATE)
-    rendered = template.render(result=result, is_correlated_finding=is_correlated_finding)
+    rendered = template.render(
+        result=result,
+        correlated_findings=correlated_findings,
+        base_findings=base_findings,
+        grouped_relationships=grouped_relationships,
+    )
 
     out_file.write_text(rendered, encoding="utf-8")
     return out_file

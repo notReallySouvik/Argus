@@ -16,6 +16,8 @@ def write_assets_csv(result: ScanResult, output_dir: Path) -> Path:
                 "host",
                 "live",
                 "confidence",
+                "exposure_summary",
+                "context_tags",
                 "discovery_sources",
                 "ip_addresses",
                 "services",
@@ -29,25 +31,40 @@ def write_assets_csv(result: ScanResult, output_dir: Path) -> Path:
         )
 
         for asset in result.assets:
-            discovery_sources = ", ".join(
-                source.name for source in asset.discovery_sources
-            ) if asset.discovery_sources else ""
+            discovery_sources = (
+                ", ".join(source.name for source in asset.discovery_sources)
+                if asset.discovery_sources
+                else ""
+            )
 
-            services = ", ".join(
-                f"{svc.service_name or 'unknown'}:{svc.port}"
-                for svc in asset.services
-            ) if asset.services else ""
+            services = (
+                ", ".join(
+                    f"{svc.service_name or 'unknown'}:{svc.port}"
+                    + (f" ({svc.classification})" if svc.classification else "")
+                    for svc in asset.services
+                )
+                if asset.services
+                else ""
+            )
 
-            relationships = ", ".join(
-                f"{rel.relationship_type}:{rel.target}"
-                for rel in asset.relationships
-            ) if asset.relationships else ""
+            relationships = (
+                ", ".join(
+                    f"{rel.relationship_type}:{rel.target}"
+                    for rel in asset.relationships
+                )
+                if asset.relationships
+                else ""
+            )
+
+            context_tags = ", ".join(asset.context_tags) if asset.context_tags else ""
 
             writer.writerow(
                 [
                     asset.host,
                     asset.live,
                     asset.confidence,
+                    asset.exposure_summary or "",
+                    context_tags,
                     discovery_sources,
                     ", ".join(asset.ip_addresses),
                     services,

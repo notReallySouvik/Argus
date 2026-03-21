@@ -1,4 +1,4 @@
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 # --- Network / Timeouts ---
 DEFAULT_HTTP_TIMEOUT = 8.0
 DEFAULT_PROBE_TIMEOUT = 5.0

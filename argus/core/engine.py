@@ -1,22 +1,12 @@
 import httpx
-
-from argus.config import (
-    ADMIN_KEYWORDS,
-    ADMIN_PANEL_KEYWORDS,
-    BACKUP_KEYWORDS,
-    CONFIDENCE_PRIMARY,
-    DEFAULT_HTTP_TIMEOUT,
-    DEFAULT_PAGE_MARKERS,
-    DIRECTORY_LISTING_MARKERS,
-    ERROR_PAGE_MARKERS,
-    INTERNAL_KEYWORDS,
-    LEGACY_KEYWORDS,
-    LOGIN_KEYWORDS,
-    NON_PROD_KEYWORDS,
-    UNEXPECTED_STATUS_CODES,
-    USER_AGENT,
-)
+from argus.core.context import build_asset_context
+from argus.config import CONFIDENCE_PRIMARY, DEFAULT_HTTP_TIMEOUT, USER_AGENT
+from argus.core.correlation import apply_correlated_signals
+from argus.core.findings import build_findings_for_asset
 from argus.core.scope import validate_target
+from argus.core.signals import apply_risk_signals
+from argus.models import asset
+from argus.models import asset
 from argus.models.asset import Asset, Relationship
 from argus.models.finding import Finding
 from argus.models.scan import ScanResult, ScanSummary
@@ -27,10 +17,9 @@ from argus.modules.tech import fingerprint_technologies
 from argus.modules.validate import probe_http
 from argus.modules.web import fetch_web_metadata
 from argus.utils.logger import get_logger
-from argus.core.findings import build_findings_for_asset
-from argus.core.signals import apply_risk_signals
 
 logger = get_logger(__name__)
+
 
 def run_scan(target: str, enable_tech: bool = True) -> ScanResult:
     logger.info("Starting scan for target: %s", target)
@@ -113,8 +102,9 @@ def run_scan(target: str, enable_tech: bool = True) -> ScanResult:
                                 target=tech,
                             )
                         )
-
             apply_risk_signals(asset)
+            apply_correlated_signals(asset)
+            build_asset_context(asset)
 
             if asset.risk_signals:
                 summary.assets_with_signals += 1

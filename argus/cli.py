@@ -5,7 +5,7 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-
+from argus.core.findings import is_correlated_finding
 from argus.config import DEFAULT_OUTPUT_DIR, VERSION
 from argus.core.engine import run_scan
 from argus.output.csv_writer import write_assets_csv
@@ -178,6 +178,7 @@ def scan(
     medium_count = sum(1 for f in result.findings if f.severity.lower() == "medium")
     info_count = sum(1 for f in result.findings if f.severity.lower() == "info")
     low_count = sum(1 for f in result.findings if f.severity.lower() == "low")
+    correlated_count = sum(1 for f in result.findings if is_correlated_finding(f.signal))
 
     summary_text = (
         f"Candidate hosts: {result.summary.candidate_hosts}\n"
@@ -186,6 +187,7 @@ def scan(
         f"Exposed services: {result.summary.exposed_services}\n"
         f"Assets with signals: {result.summary.assets_with_signals}\n"
         f"Total findings: {len(result.findings)}\n"
+        f"Correlated findings: {correlated_count}\n"
         f"High: {high_count} | Medium: {medium_count} | Info: {info_count} | Low: {low_count}"
     )
 

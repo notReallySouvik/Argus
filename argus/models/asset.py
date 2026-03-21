@@ -47,5 +47,7 @@ class Asset(BaseModel):
     risk_signals: List[str] = Field(default_factory=list)
     discovery_sources: List[DiscoverySource] = Field(default_factory=list)
     relationships: List[Relationship] = Field(default_factory=list)
+    context_tags: List[str] = Field(default_factory=list)
+    exposure_summary: Optional[str] = None
     live: bool = False
     confidence: float = 0.0
